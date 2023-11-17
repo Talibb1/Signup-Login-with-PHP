@@ -1,7 +1,6 @@
-
+<!-- Database connected -->
 <?php
-
-    define('server',"mysql:host=localhost;dbname=admin_information");
+    define('server',"mysql:host=localhost;dbname=signup_login");
     define('user',"root");
     define('password',"");
     try
@@ -12,6 +11,3 @@
         echo $error->getMessage();
     }
 ?>
-
-
-<!-- $connection = new PDO('mysql:host=localhost;dbname=2209g2','root',''); -->

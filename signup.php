@@ -1,10 +1,88 @@
-<?php include "Connection.php" ?>
+<?php
+include "Connection.php";
+
+$errors = array();
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Retrieve and sanitize form data
+    $first_name = filter_input(INPUT_POST, "First_name", FILTER_SANITIZE_STRING);
+    $last_name = filter_input(INPUT_POST, "Last_name", FILTER_SANITIZE_STRING);
+    $email = filter_input(INPUT_POST, "email", FILTER_SANITIZE_EMAIL);
+    $password = filter_input(INPUT_POST, "Password", FILTER_SANITIZE_STRING);
+    $conform_password = filter_input(INPUT_POST, "conform_password", FILTER_SANITIZE_STRING);
+
+    // Validate data
+    if (empty($first_name) || empty($last_name) || empty($email) || empty($password) || empty($conform_password)) {
+        $errors[] = "All fields are required.";
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid email format.";
+    }
+
+    $password_pattern = "/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/";
+    if (!preg_match($password_pattern, $password)) {
+        $errors[] = "Password must be at least 8 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.";
+    }
+
+    if ($password !== $conform_password) {
+        $errors[] = "Passwords do not match.";
+    }
+
+    // Check if there are no validation errors
+    if (empty($errors)) {
+        // Check if the email already exists
+        $check_email_query = "SELECT * FROM `user_signup` WHERE `user_email` = :user_email";
+        $check_email_query_prepare = $connection->prepare($check_email_query);
+        $check_email_query_prepare->bindParam(':user_email', $email);
+        $check_email_query_prepare->execute();
+
+        // If the email already exists, display an error
+        if ($check_email_query_prepare->rowCount() > 0) {
+            $errors[] = "Email is already in use. Please choose a different email address.";
+        } else {
+            // Hash the password for security
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+            // Prepare and execute the INSERT query
+            $register_user_query = "INSERT INTO `user_signup`(`first_name`, `last_name`, `user_email`, `user_password`) VALUES (:first_name, :last_name, :user_email, :user_password)";
+            $register_user_query_prepare = $connection->prepare($register_user_query);
+            $register_user_query_prepare->bindParam(':first_name', $first_name);
+            $register_user_query_prepare->bindParam(':last_name', $last_name);
+            $register_user_query_prepare->bindParam(':user_email', $email);
+            $register_user_query_prepare->bindParam(':user_password', $hashed_password);
+
+            if ($register_user_query_prepare->execute()) {
+                // Registration successful
+                // You can redirect to a login page or perform other actions
+                header("location: login.php");
+                exit();
+            } else {
+                // Registration failed
+                $errors[] = "Registration failed. Please try again.";
+            }
+        }
+    }
+}
+
+
+// Close the database connection
+$connection = null;
+?>
+
+<!-- Rest of your HTML code -->
 
 <?php
-if (isset($_SESSION["userId"])) {
-    header("location:index.php");
+// Display validation errors
+if (!empty($errors)) {
+    echo '<div class="alert alert-danger">';
+    foreach ($errors as $error) {
+        echo '<p>' . $error . '</p>';
+    }
+    echo '</div>';
 }
 ?>
+
 
 
 
@@ -49,7 +127,7 @@ if (isset($_SESSION["userId"])) {
                             <div class="card-body p-5 shadow-5 text-center">
                                 <h2 class="fw-bold mb-5">Sign up now</h2>
 
-                                <form method="post" action="">
+                                <form action="<?php $_SERVER['PHP_SELF'] ?>" method="post">
 
                                     <!-- first and last names -->
                                     <div class="row">
